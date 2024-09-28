@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: subtitler-api
+  labels:
+    app: subtitler-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: subtitler-api
+  template:
+    metadata:
+      labels:
+        app: subtitler-api
+    spec:
+      containers:
+      - name: subtitler-api
+        image: registry.paranoids.us/subtitler-api:main
+        imagePullPolicy: Always
+        env:
+          - name: TAG_HOST
+            value: 0.0.0.0
+          - name: TAG_PORT
+            value: "4002"
+
+        ports:
+        - containerPort: 4002
+      imagePullSecrets:
+      - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: subtitler-api-svc
+spec:
+  selector:
+    app: subtitler-api
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 4002

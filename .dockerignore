@@ -1,0 +1,5 @@
+_deployment-manifests/
+.github
+.gitignore
+.env
+README.md
