@@ -2,6 +2,7 @@ package webserver
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	ginlogger "github.com/gin-contrib/logger"
@@ -14,6 +15,7 @@ import (
 
 type Manager interface {
 	Search(ctx context.Context, query string) []models.Subtitle
+	Download(ctx context.Context, subtitleId string) (io.ReadCloser, string, string, error)
 }
 
 type WebServer struct {
@@ -57,5 +59,9 @@ func (w *WebServer) loadRoutes() {
 	{
 		// TODO: Add WhisperPath
 		search.GET("/all/", w.SearchAll)
+	}
+	download := w.ginger.Group("/download")
+	{
+		download.GET(":subtitleId", w.Download)
 	}
 }

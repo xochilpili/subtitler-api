@@ -3,6 +3,8 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -223,4 +225,27 @@ func getComments(provider *ProviderParams, subtitle *models.Subtitle, subChan ch
 
 	//subtitle.Comments = comments
 	subChan <- *subtitle
+}
+
+func downloadSubtitle(provider *ProviderParams, subtitleId string) (io.ReadCloser, string, string, error) {
+	res, err := provider.r.R().
+		SetContext(provider.ctx).
+		SetHeaders(map[string]string{
+			"User-Agent": provider.config.userAgent,
+			"Referer":    provider.config.url + "descargar.php",
+			"Connection": "keep-alive",
+		}).
+		SetDebug(provider.config.debug).
+		SetDoNotParseResponse(true).
+		SetQueryParam("id", subtitleId).
+		Get(provider.config.url + "descargar.php")
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	contentType := res.Header().Get("Content-Type")
+	ext := strings.Split(contentType, "/")[1]
+	filename := fmt.Sprintf("%s.%s", subtitleId, ext)
+	provider.logger.Info().Msgf("downloading file: %s", filename)
+	return res.RawBody(), filename, contentType, nil
 }

@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"io"
 	"sync"
 
 	"github.com/go-resty/resty/v2"
@@ -25,9 +26,11 @@ type ProviderParams struct {
 }
 
 type Search func(provider *ProviderParams, query string) []models.Subtitle
+type Download func(provider *ProviderParams, subtitleId string) (io.ReadCloser, string, string, error)
 type Handler struct {
-	config *ProviderConfig
-	Search Search
+	config   *ProviderConfig
+	Search   Search
+	Download Download
 }
 
 type Manager struct {
@@ -47,7 +50,8 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 				userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
 				debug:     false,
 			},
-			Search: search,
+			Search:   search,
+			Download: downloadSubtitle,
 		},
 	}
 	return &Manager{
@@ -61,6 +65,15 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 func (m *Manager) Search(ctx context.Context, query string) []models.Subtitle {
 	items := m.search(ctx, query)
 	return items
+}
+
+func (m *Manager) Download(ctx context.Context, subtitleId string) (io.ReadCloser, string, string, error) {
+	return m.handlers["subdivx"].Download(&ProviderParams{
+		config: m.handlers["subdivx"].config,
+		logger: m.logger,
+		r:      m.r,
+		ctx:    ctx,
+	}, subtitleId)
 }
 
 func (m *Manager) search(ctx context.Context, query string) []models.Subtitle {
