@@ -59,14 +59,12 @@ func getToken(provider *ProviderParams) (*Token, error) {
 		provider.logger.Err(err).Msgf("error while getting token")
 		return nil, err
 	}
-	headers := res.Header()
-	cookies := headers["Set-Cookie"]
-	token.Cookie = strings.Split(strings.Split(cookies[0], ";")[0], "=")[1]
 
 	err = json.Unmarshal(res.Body(), &token)
 	if err != nil {
 		return nil, err
 	}
+
 	return &token, nil
 }
 
