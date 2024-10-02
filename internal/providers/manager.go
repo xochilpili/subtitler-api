@@ -62,7 +62,7 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 				searchUrl: "api/v1/subtitles",
 				userAgent: "subtitlerApi v1.0.0",
 				debug:     true,
-				apiKey:    config.OpenSubtitlesApiKey,
+				apiKey:    strings.TrimSpace(config.OpenSubtitlesApiKey),
 			},
 			Search:   searchOpenSubtitles,
 			Download: downloadOpenSubtitle,
