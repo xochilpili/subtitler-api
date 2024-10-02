@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -62,7 +61,7 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 				url:       "https://api.opensubtitles.com/",
 				searchUrl: "api/v1/subtitles",
 				userAgent: "subtitlerApi v1.0.0",
-				debug:     false,
+				debug:     true,
 				apiKey:    config.OpenSubtitlesApiKey,
 			},
 			Search:   searchOpenSubtitles,
@@ -78,7 +77,6 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 }
 
 func (m *Manager) Search(ctx context.Context, query string, postFilter *models.PostFilters) []models.Subtitle {
-	fmt.Printf("post filters: %v", postFilter)
 	items := m.search(ctx, query)
 	filtered := m.postFiltering(postFilter, items)
 	return filtered
