@@ -20,7 +20,7 @@ type Token struct {
 	Token  string `json:"token"`
 }
 
-func search(provider *ProviderParams, query string) []models.Subtitle {
+func searchDivx(provider *ProviderParams, query string) []models.Subtitle {
 	ctx, cancel := context.WithTimeout(provider.ctx, 30*time.Second)
 	provider.ctx = ctx
 	defer cancel()
@@ -107,31 +107,24 @@ func getSubtitles(provider *ProviderParams, params *SubdivxSubPayload) ([]models
 		var quality []string
 		var resolution []string
 		var duration []string
-
+		var year int
 		stripTags := bluemonday.StripTagsPolicy()
 		title := reg.ReplaceAllString(stripTags.Sanitize(item.Title), " ")
 		desc := reg.ReplaceAllString(stripTags.Sanitize(item.Description), " ")
-		g := Parse(desc, "group")
-		if g != "" {
-			group = append(group, g)
-		}
-		q := Parse(desc, "quality")
-		if q != "" {
-			quality = append(quality, q)
-		}
-		res := Parse(desc, "resolution")
-		if res != "" {
-			resolution = append(resolution, res)
-		}
-		d := Parse(desc, "duration")
-		if d != "" {
-			duration = append(duration, d)
+		group, quality, resolution, duration = parse(desc)
+		y := Parse(title, "year")
+		if y != nil {
+			yy, _ := strconv.Atoi(y[0])
+			year = yy
 		}
 		subtitle := &models.Subtitle{
+			Provider:    "subdivx",
 			Id:          item.Id,
 			Title:       title,
 			Description: desc,
+			Language:    "es",
 			//Cds:         item.Cds,
+			Year: year,
 		}
 
 		subtitle.Group = group
@@ -190,23 +183,7 @@ func getComments(provider *ProviderParams, subtitle *models.Subtitle, subChan ch
 		if comment.Comment != "" {
 			desc := reg.ReplaceAllString(stripTags.Sanitize(comment.Comment), " ")
 			//nick := reg.ReplaceAllString(stripTags.Sanitize(comment.Nick), " ")
-			g := Parse(desc, "group")
-			if g != "" {
-				group = append(group, g)
-			}
-			q := Parse(desc, "quality")
-			if q != "" {
-				quality = append(quality, q)
-			}
-			res := Parse(desc, "resolution")
-			if res != "" {
-				resolution = append(resolution, res)
-			}
-			d := Parse(desc, "duration")
-			if d != "" {
-				duration = append(duration, d)
-			}
-
+			group, quality, resolution, duration = parse(desc)
 			/* comments = append(comments, models.SubComments{
 				Id:      comment.Id,
 				Comment: desc,
@@ -225,7 +202,7 @@ func getComments(provider *ProviderParams, subtitle *models.Subtitle, subChan ch
 	subChan <- *subtitle
 }
 
-func downloadSubtitle(provider *ProviderParams, subtitleId string) (io.ReadCloser, string, string, error) {
+func downloadDivxSubtitle(provider *ProviderParams, subtitleId string) (io.ReadCloser, string, string, error) {
 	res, err := provider.r.R().
 		SetContext(provider.ctx).
 		SetHeaders(map[string]string{
@@ -246,4 +223,28 @@ func downloadSubtitle(provider *ProviderParams, subtitleId string) (io.ReadClose
 	filename := fmt.Sprintf("%s.%s", subtitleId, ext)
 	provider.logger.Info().Msgf("downloading file: %s", filename)
 	return res.RawBody(), filename, contentType, nil
+}
+
+func parse(text string) ([]string, []string, []string, []string) {
+	var group []string
+	var quality []string
+	var resolution []string
+	var duration []string
+	g := Parse(text, "group")
+	if g != nil {
+		group = append(group, g...)
+	}
+	q := Parse(text, "quality")
+	if q != nil {
+		quality = append(quality, q...)
+	}
+	res := Parse(text, "resolution")
+	if res != nil {
+		resolution = append(resolution, res...)
+	}
+	d := Parse(text, "duration")
+	if d != nil {
+		duration = append(duration, d...)
+	}
+	return group, quality, resolution, duration
 }

@@ -2,7 +2,9 @@ package providers
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/go-resty/resty/v2"
@@ -16,6 +18,7 @@ type ProviderConfig struct {
 	searchUrl string
 	userAgent string
 	debug     bool
+	apiKey    string
 }
 
 type ProviderParams struct {
@@ -49,9 +52,21 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 				searchUrl: "inc/ajax.php",
 				userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
 				debug:     false,
+				apiKey:    "",
 			},
-			Search:   search,
-			Download: downloadSubtitle,
+			Search:   searchDivx,
+			Download: downloadDivxSubtitle,
+		},
+		"opensubtitles": {
+			config: &ProviderConfig{
+				url:       "https://api.opensubtitles.com/",
+				searchUrl: "api/v1/subtitles",
+				userAgent: "subtitlerApi v1.0.0",
+				debug:     false,
+				apiKey:    config.OpenSubtitlesApiKey,
+			},
+			Search:   searchOpenSubtitles,
+			Download: downloadOpenSubtitle,
 		},
 	}
 	return &Manager{
@@ -62,9 +77,11 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 	}
 }
 
-func (m *Manager) Search(ctx context.Context, query string) []models.Subtitle {
+func (m *Manager) Search(ctx context.Context, query string, postFilter *models.PostFilters) []models.Subtitle {
+	fmt.Printf("post filters: %v", postFilter)
 	items := m.search(ctx, query)
-	return items
+	filtered := m.postFiltering(postFilter, items)
+	return filtered
 }
 
 func (m *Manager) Download(ctx context.Context, subtitleId string) (io.ReadCloser, string, string, error) {
@@ -106,4 +123,34 @@ func (m *Manager) search(ctx context.Context, query string) []models.Subtitle {
 		subtitles = append(subtitles, item...)
 	}
 	return subtitles
+}
+
+func (m *Manager) postFiltering(filters *models.PostFilters, subtitles []models.Subtitle) []models.Subtitle {
+	var filtered []models.Subtitle
+	for _, item := range subtitles {
+		if filters.Year > 0 && item.Year != filters.Year {
+			continue
+		}
+		if filters.Group != "" && !m.contains(filters.Group, item.Group) {
+
+			continue
+		}
+		if filters.Quality != "" && !m.contains(filters.Quality, item.Quality) {
+			continue
+		}
+		if filters.Resolution != "" && !m.contains(filters.Resolution, item.Resolution) {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered
+}
+
+func (m *Manager) contains(term string, terms []string) bool {
+	for _, item := range terms {
+		if strings.Contains(term, item) {
+			return true
+		}
+	}
+	return false
 }

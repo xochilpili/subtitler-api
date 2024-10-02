@@ -1,5 +1,12 @@
 package models
 
+type PostFilters struct {
+	Year       int
+	Group      string
+	Quality    string
+	Resolution string
+}
+
 /*type Subtitle struct {
 	Title string `json:"title"`
 }*/
@@ -12,13 +19,16 @@ type SubComments struct {
 	Date    string `json:"fecha_creacion"`
 }
 type Subtitle struct {
+	Provider    string `json:"provider"`
 	Id          int    `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	Language    string `json:"language"`
 	//Cds         int           `json:"cds"`
 	//Comments    []SubComments `json:"comments,omitempty"`
 	Group      []string `json:"group"`
 	Quality    []string `json:"quality"`
 	Resolution []string `json:"resolution"`
 	Duration   []string `json:"duration"`
+	Year       int      `json:"year"`
 }
