@@ -24,7 +24,11 @@ spec:
             value: 0.0.0.0
           - name: TAG_PORT
             value: "4002"
-
+          - name: SA_OPEN_SUBTITLES_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: subtitler-api-key
+                key: apiKey
         ports:
         - containerPort: 4002
       imagePullSecrets:
