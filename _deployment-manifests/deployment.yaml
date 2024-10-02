@@ -20,9 +20,9 @@ spec:
         image: registry.paranoids.us/subtitler-api:main
         imagePullPolicy: Always
         env:
-          - name: TAG_HOST
+          - name: SA_HOST
             value: 0.0.0.0
-          - name: TAG_PORT
+          - name: SA_PORT
             value: "4002"
           - name: SA_OPEN_SUBTITLES_API_KEY
             valueFrom:
