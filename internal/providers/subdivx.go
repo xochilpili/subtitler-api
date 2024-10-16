@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -25,25 +26,56 @@ func searchDivx(provider *ProviderParams, query string) []models.Subtitle {
 	provider.ctx = ctx
 	defer cancel()
 	provider.logger.Info().Msgf("searching subtitles for: %s", query)
+	version, err := getVersion(provider)
+	if err != nil {
+		return nil
+	}
+
 	token, err := getToken(provider)
 	if err != nil {
 		return nil
 	}
+
 	provider.logger.Debug().Msgf("token: %s, cookie: %s", token.Token, token.Cookie)
+
 	params := &SubdivxSubPayload{
 		Tabla:   "resultados",
 		Filtros: "",
 		Buscar:  query,
 		Token:   token.Token,
 	}
+	buscaVersion := fmt.Sprintf("buscar%s", version)
+	fmt.Printf("version: %s", buscaVersion)
 
-	data, err := getSubtitles(provider, params)
+	queryParams := map[string]string{
+		"tabla":      params.Tabla,
+		"filtros":    params.Filtros,
+		buscaVersion: params.Buscar,
+		"token":      params.Token,
+	}
+	fmt.Printf("Params: %v\n", queryParams)
+	data, err := getSubtitles(provider, queryParams)
 	if err != nil {
 		provider.logger.Err(err).Msg("error while getting subtitles")
 		return nil
 	}
 
 	return data
+}
+
+func getVersion(provider *ProviderParams) (string, error) {
+	res, err := provider.r.R().Get(provider.config.url)
+	if err != nil {
+		provider.logger.Err(err).Msg("error while getting version")
+		return "", errors.New("error while requesting version")
+	}
+	re := regexp.MustCompile(`<div[^>]*id="vs"[^>]*>([^<]+)</div>`)
+	match := re.FindStringSubmatch(string(res.Body()))
+	if len(match) > 1 {
+		version := match[1]
+		return strings.Trim(strings.Replace(strings.TrimPrefix(version, "v"), ".", "", -1), "\n"), nil
+	}
+	return "", errors.New("error while parsing version")
 }
 
 func getToken(provider *ProviderParams) (*Token, error) {
@@ -68,16 +100,11 @@ func getToken(provider *ProviderParams) (*Token, error) {
 	return &token, nil
 }
 
-func getSubtitles(provider *ProviderParams, params *SubdivxSubPayload) ([]models.Subtitle, error) {
+func getSubtitles(provider *ProviderParams, params map[string]string) ([]models.Subtitle, error) {
 	var result SubdivxResponse[SubData]
 	resp, err := provider.r.R().
 		SetContext(provider.ctx).
-		SetFormData(map[string]string{
-			"tabla":     params.Tabla,
-			"filtros":   params.Filtros,
-			"buscar393": params.Buscar,
-			"token":     params.Token,
-		}).
+		SetFormData(params).
 		SetHeaders(map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
 			"User-Agent":   provider.config.userAgent,
@@ -145,7 +172,7 @@ func getSubtitles(provider *ProviderParams, params *SubdivxSubPayload) ([]models
 	for item := range subtitlesChan {
 		subtitles = append(subtitles, item)
 	}
-	provider.logger.Info().Msgf("returned %d subtitles for %s", len(subtitles), params.Buscar)
+	provider.logger.Info().Msgf("returned %d subtitles", len(subtitles))
 	return subtitles, nil
 }
 
