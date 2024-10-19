@@ -33,10 +33,12 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: subtitler-api-username
+                key: username
           - name: SA_OPEN_SUBTITLES_API_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: subtitler-api-password
+                key: password
         ports:
         - containerPort: 4002
       imagePullSecrets:
