@@ -12,11 +12,13 @@ const (
 )
 
 type Config struct {
-	HOST                string `default:"0.0.0.0" required:"true"`
-	PORT                string `default:"4002" required:"true"`
-	ServiceName         string `default:"subtitler-api" required:"true" split_words:"true"`
-	Debug               bool   `default:"false"`
-	OpenSubtitlesApiKey string `required:"true" split_words:"true"`
+	HOST                     string `default:"0.0.0.0" required:"true"`
+	PORT                     string `default:"4002" required:"true"`
+	ServiceName              string `default:"subtitler-api" required:"true" split_words:"true"`
+	Debug                    bool   `default:"false"`
+	OpenSubtitlesApiKey      string `required:"true" split_words:"true"`
+	OpenSubtitlesApiUsername string `required:"true" split_words:"true"`
+	OpenSubtitlesApiPassword string `required:"true" split_words:"true"`
 }
 
 func New() *Config {

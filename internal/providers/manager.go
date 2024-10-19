@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -13,11 +14,13 @@ import (
 )
 
 type ProviderConfig struct {
-	url       string
-	searchUrl string
-	userAgent string
-	debug     bool
-	apiKey    string
+	url         string
+	searchUrl   string
+	userAgent   string
+	debug       bool
+	apiKey      string
+	apiUsername string
+	apiPassword string
 }
 
 type ProviderParams struct {
@@ -28,7 +31,7 @@ type ProviderParams struct {
 }
 
 type Search func(provider *ProviderParams, query string) []models.Subtitle
-type Download func(provider *ProviderParams, subtitleId string) (io.ReadCloser, string, string, error)
+type Download func(params *ProviderParams, subtitleId string) (io.ReadCloser, string, string, error)
 type Handler struct {
 	config   *ProviderConfig
 	Search   Search
@@ -58,11 +61,13 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 		},
 		"opensubtitles": {
 			config: &ProviderConfig{
-				url:       "https://api.opensubtitles.com/",
-				searchUrl: "api/v1/subtitles",
-				userAgent: "subtitlerApi v1.0.0",
-				debug:     config.Debug,
-				apiKey:    strings.TrimSpace(config.OpenSubtitlesApiKey),
+				url:         "https://api.opensubtitles.com/",
+				searchUrl:   "api/v1/subtitles",
+				userAgent:   "subtitlerApi v1.0.0",
+				debug:       config.Debug,
+				apiKey:      strings.TrimSpace(config.OpenSubtitlesApiKey),
+				apiUsername: strings.TrimSpace(config.OpenSubtitlesApiUsername),
+				apiPassword: strings.TrimSpace(config.OpenSubtitlesApiPassword),
 			},
 			Search:   searchOpenSubtitles,
 			Download: downloadOpenSubtitle,
@@ -76,27 +81,31 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 	}
 }
 
-func (m *Manager) Search(ctx context.Context, query string, postFilter *models.PostFilters) []models.Subtitle {
-	items := m.search(ctx, query)
+func (m *Manager) Search(ctx context.Context, provider string, query string, postFilter *models.PostFilters) []models.Subtitle {
+	items := m.search(ctx, provider, query)
 	filtered := m.postFiltering(postFilter, items)
 	return filtered
 }
 
-func (m *Manager) Download(ctx context.Context, subtitleId string) (io.ReadCloser, string, string, error) {
-	return m.handlers["subdivx"].Download(&ProviderParams{
-		config: m.handlers["subdivx"].config,
+func (m *Manager) Download(ctx context.Context, provider string, subtitleId string) (io.ReadCloser, string, string, error) {
+	return m.handlers[provider].Download(&ProviderParams{
+		config: m.handlers[provider].config,
 		logger: m.logger,
 		r:      m.r,
 		ctx:    ctx,
 	}, subtitleId)
 }
 
-func (m *Manager) search(ctx context.Context, query string) []models.Subtitle {
+func (m *Manager) search(ctx context.Context, provider string, query string) []models.Subtitle {
 	wg := &sync.WaitGroup{}
 	var subtitles []models.Subtitle
 	subChan := make(chan []models.Subtitle)
 
 	for p := range m.handlers {
+		if provider != "" && provider != p {
+			fmt.Printf("skipping %s not matched with %s\n", p, provider)
+			continue
+		}
 		wg.Add(1)
 		go func(ctx context.Context, provider string, query string, subChan chan<- []models.Subtitle, wg *sync.WaitGroup) {
 			defer wg.Done()

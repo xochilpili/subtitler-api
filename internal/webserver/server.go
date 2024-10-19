@@ -14,8 +14,8 @@ import (
 )
 
 type Manager interface {
-	Search(ctx context.Context, query string, filters *models.PostFilters) []models.Subtitle
-	Download(ctx context.Context, subtitleId string) (io.ReadCloser, string, string, error)
+	Search(ctx context.Context, provider string, query string, filters *models.PostFilters) []models.Subtitle
+	Download(ctx context.Context, provider string, subtitleId string) (io.ReadCloser, string, string, error)
 }
 
 type WebServer struct {
@@ -58,11 +58,11 @@ func (w *WebServer) loadRoutes() {
 	search := w.ginger.Group("/search")
 	{
 		// TODO: Add WhisperPath
-		search.GET("/:provider", w.SearchByProvider)
 		search.GET("/all/", w.SearchAll)
+		search.GET("/:provider/", w.SearchByProvider)
 	}
 	download := w.ginger.Group("/download")
 	{
-		download.GET(":subtitleId", w.Download)
+		download.GET(":provider/:subtitleId", w.Download)
 	}
 }

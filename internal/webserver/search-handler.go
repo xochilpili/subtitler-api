@@ -22,7 +22,7 @@ func (w *WebServer) SearchByProvider(c *gin.Context) {
 		return
 	}
 
-	subtitles := w.manager.Search(c.Request.Context(), query, getPostFilters(c))
+	subtitles := w.manager.Search(c.Request.Context(), provider, query, getPostFilters(c))
 	c.JSON(http.StatusOK, &gin.H{"message": "ok", "total": len(subtitles), "data": subtitles})
 }
 
@@ -32,19 +32,23 @@ func (w *WebServer) SearchAll(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, &gin.H{"mesasge": "error", "error": "bad request"})
 		return
 	}
-
-	subtitles := w.manager.Search(c.Request.Context(), query, getPostFilters(c))
+	subtitles := w.manager.Search(c.Request.Context(), "", query, getPostFilters(c))
 	c.JSON(http.StatusOK, &gin.H{"message": "ok", "total": len(subtitles), "data": subtitles})
 }
 
 func (w *WebServer) Download(c *gin.Context) {
+	provider := c.Param("provider")
+	if provider == "" {
+		c.JSON(http.StatusBadRequest, &gin.H{"message": "error", "error": "bad request"})
+		return
+	}
 	subtitleId := c.Param("subtitleId")
 	if subtitleId == "" {
 		c.JSON(http.StatusBadRequest, &gin.H{"message": "error", "error": "bad request"})
 		return
 	}
 	w.logger.Info().Msgf("downloading subtitle: %s", subtitleId)
-	body, filename, contentType, err := w.manager.Download(c.Request.Context(), subtitleId)
+	body, filename, contentType, err := w.manager.Download(c.Request.Context(), provider, subtitleId)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, &gin.H{"message": "error", "error": err.Error()})
 		return
