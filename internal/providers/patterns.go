@@ -9,7 +9,7 @@ var patterns = map[string]struct {
 	re *regexp.Regexp
 }{
 	"group": {
-		re: regexp.MustCompile(`(?mi)(fgt|evo|yts|yts?\.mx|yifi|yify|MkvCage|NoMeRcY|STRiFE|SiGMA|LucidTV|CHD|sujaidr|SAPHiRE|LEGI0N|hd4u|rarbg|ViSiON|ETRG|JYK|iFT|anoXmous|MkvCage|Ganool|TGx|klaxxon|icebane|greenbud1969|flawl3ss|metcon|proper|ntb|cm8|tbs|sva|avs|mtb|ion10|sauron|phoenix|minx|mvgroup|amiable|sadece|gooz|lite|killers|tbs|PHOENiX|memento|done|ExKinoRay|acool|starz|convoy|playnow|RedBlade|ntg|cmrg|cm|2hd|fty|haggis|Joy|dimension|0tv|fxg|kat|artsubs|horizon|axxo|diamond|asteroids|rarbg|unit3d|afg|xlf|pulsar|bamboozle|ebp|trump|bulit|pahe|lol|tjhd|DeeJayAhmed|DeeJahAhmed|HEVC|anoxmous|galaxy|aoc|flux|roen|silence|CiNEFiLE|wrd|rico|huzzah|RiSEHD|Subs-Team|iExTV|ROLLiT|CONDITION|CinemaniaHD|FraMeSToR|CtrlHD|ION265|tepes|gossip|COLLECTiVE)`),
+		re: regexp.MustCompile(`(?mi)(fgt|evo|yts|yts?\.mx|yts\.am|yifi|yify|MkvCage|NoMeRcY|STRiFE|SiGMA|LucidTV|CHD|sujaidr|SAPHiRE|LEGI0N|hd4u|rarbg|ViSiON|ETRG|JYK|iFT|anoXmous|MkvCage|Ganool|TGx|klaxxon|icebane|greenbud1969|flawl3ss|metcon|proper|ntb|cm8|tbs|sva|avs|mtb|ion10|sauron|phoenix|minx|mvgroup|amiable|sadece|gooz|lite|killers|tbs|PHOENiX|memento|done|ExKinoRay|acool|starz|convoy|playnow|RedBlade|ntg|cmrg|cm|2hd|fty|haggis|Joy|dimension|0tv|fxg|kat|artsubs|horizon|horizon-artsub|axxo|diamond|asteroids|rarbg|rargb|unit3d|afg|xlf|pulsar|bamboozle|ebp|trump|bulit|pahe|lol|tjhd|DeeJayAhmed|DeeJahAhmed|anoxmous|galaxy|aoc|flux|roen|silence|CiNEFiLE|wrd|rico|huzzah|RiSEHD|Subs-Team|iExTV|ROLLiT|CONDITION|CinemaniaHD|FraMeSToR|CtrlHD|ion|ION265|tepes|gossip|COLLECTiVE|nate_666)`),
 	},
 	"duration": {
 		re: regexp.MustCompile(`(?mi)(\d:\d{2}:\d{2})`),
