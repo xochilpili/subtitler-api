@@ -23,6 +23,12 @@ var patterns = map[string]struct {
 	"year": {
 		re: regexp.MustCompile(`\((\d{4})\)`),
 	},
+	"season": {
+		re: regexp.MustCompile(`(?i)(s?([0-9]{1,2}))(?:[exof]|$)`),
+	},
+	"episode": {
+		re: regexp.MustCompile(`(?i)([exof]([0-9]{1,2})(?:[^0-9]|$))`),
+	},
 }
 
 func Parse(raw string, pattern string) []string {

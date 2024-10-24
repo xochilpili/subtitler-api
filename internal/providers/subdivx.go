@@ -135,10 +135,14 @@ func getSubtitles(provider *ProviderParams, params map[string]string) ([]models.
 		var resolution []string
 		var duration []string
 		var year int
+		var itemType string
+		var season int
+		var episode int
 		stripTags := bluemonday.StripTagsPolicy()
 		title := reg.ReplaceAllString(stripTags.Sanitize(item.Title), " ")
 		desc := reg.ReplaceAllString(stripTags.Sanitize(item.Description), " ")
-		group, quality, resolution, duration = parse(desc)
+		itemType, season, episode = parseTitle(title)
+		group, quality, resolution, duration = parseExtra(desc)
 		y := Parse(title, "year")
 		if y != nil {
 			yy, _ := strconv.Atoi(y[0])
@@ -146,12 +150,15 @@ func getSubtitles(provider *ProviderParams, params map[string]string) ([]models.
 		}
 		subtitle := &models.Subtitle{
 			Provider:    "subdivx",
+			Type: itemType,
 			Id:          item.Id,
 			Title:       title,
 			Description: desc,
 			Language:    "es",
 			//Cds:         item.Cds,
 			Year: year,
+			Season: season,
+			Episode: episode,
 		}
 
 		subtitle.Group = group
@@ -203,14 +210,13 @@ func getComments(provider *ProviderParams, subtitle *models.Subtitle, subChan ch
 	var quality []string
 	var resolution []string
 	var duration []string
-
 	stripTags := bluemonday.StripTagsPolicy()
 	reg := regexp.MustCompile(`\n|\r\n`)
 	for _, comment := range result.Data {
 		if comment.Comment != "" {
 			desc := reg.ReplaceAllString(stripTags.Sanitize(comment.Comment), " ")
 			//nick := reg.ReplaceAllString(stripTags.Sanitize(comment.Nick), " ")
-			group, quality, resolution, duration = parse(desc)
+			group, quality, resolution, duration = parseExtra(desc)
 			/* comments = append(comments, models.SubComments{
 				Id:      comment.Id,
 				Comment: desc,
@@ -252,11 +258,32 @@ func downloadDivxSubtitle(provider *ProviderParams, subtitleId string) (io.ReadC
 	return res.RawBody(), filename, contentType, nil
 }
 
-func parse(text string) ([]string, []string, []string, []string) {
+func parseTitle(text string) (itemType string, season int, episode int){
+	s := Parse(text, "season")
+	if s != nil {
+		re := regexp.MustCompile("[^0-9]+")
+		seasonStr := re.ReplaceAllString(s[0], "")
+		season, _ = strconv.Atoi(seasonStr)
+		itemType = "serie"
+	}
+	e := Parse(text, "episode")
+	if e != nil{
+		re := regexp.MustCompile("[^0-9]+")
+		str := re.ReplaceAllString(e[0], "")
+		episode, _ = strconv.Atoi(str)
+		itemType = "serie"
+	}
+	if itemType == ""{
+		itemType = "movie"
+	}
+	return
+}
+func parseExtra(text string) ([]string, []string, []string, []string) {
 	var group []string
 	var quality []string
 	var resolution []string
 	var duration []string
+	
 	g := Parse(text, "group")
 	if g != nil {
 		group = append(group, g...)

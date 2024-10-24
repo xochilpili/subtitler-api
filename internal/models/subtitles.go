@@ -20,6 +20,7 @@ type SubComments struct {
 }
 type Subtitle struct {
 	Provider    string `json:"provider"`
+	Type string `json:"type"`
 	Id          int    `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -31,4 +32,6 @@ type Subtitle struct {
 	Resolution []string `json:"resolution"`
 	Duration   []string `json:"duration"`
 	Year       int      `json:"year"`
+	Season int `json:"season"`
+	Episode int `json:"episode"`
 }

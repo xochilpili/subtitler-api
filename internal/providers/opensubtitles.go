@@ -48,12 +48,17 @@ func translate2Model(items []OpenSubtitlesItem) []models.Subtitle {
 		var quality []string
 		var resolution []string
 		var duration []string
+		var itemType string
+		var season int
+		var episode int
 		id, _ := strconv.Atoi(item.Id)
 		desc := item.Attributes.Release
-		group, quality, resolution, duration = parse(desc)
+		itemType, season, episode = parseTitle(item.Attributes.FeatureDetails.Title)
+		group, quality, resolution, duration = parseExtra(desc)
 		subtitle := models.Subtitle{
 			Provider:    "opensubtitles",
 			Id:          id,
+			Type: itemType,
 			Title:       item.Attributes.FeatureDetails.Title,
 			Description: item.Attributes.Release,
 			Language:    item.Attributes.Language,
@@ -62,6 +67,8 @@ func translate2Model(items []OpenSubtitlesItem) []models.Subtitle {
 			Resolution:  resolution,
 			Duration:    duration,
 			Year:        item.Attributes.FeatureDetails.Year,
+			Season: season,
+			Episode: episode,
 		}
 		subtitles = append(subtitles, subtitle)
 	}
