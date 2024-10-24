@@ -15,7 +15,7 @@ var patterns = map[string]struct {
 		re: regexp.MustCompile(`(?mi)(\d:\d{2}:\d{2})`),
 	},
 	"quality": {
-		re: regexp.MustCompile(`(?i)\b(((?:PPV\.)?[HP]DTV|(?:HD)?CAM|B[DR]Rip|(?:HD-?)?TS|(?:PPV )?WEB-?DL(?: DVDRip)?|HDRip|DVDRip|DVDRIP|CamRip|W[EB]BRip|BluRay|DvDScr|telesync))\b`),
+		re: regexp.MustCompile(`(?i)\b(((?:PPV\.)?[HP]DTV|(?:HD)?CAM|B[DR]Rip|(?:HD-?)?TS|(?:PPV )?WEB-?DL(?: DVDRip)?|HDRip|DVDRip|DVDRIP|CamRip|W[EB]BRip|BluRay|DvDScr|telesync|hvec))\b`),
 	},
 	"resolution": {
 		re: regexp.MustCompile(`\b(([0-9]{3,4}p))\b`),
