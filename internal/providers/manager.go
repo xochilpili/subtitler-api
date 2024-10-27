@@ -33,6 +33,7 @@ type ProviderParams struct {
 type Search func(provider *ProviderParams, query string) []models.Subtitle
 type Download func(params *ProviderParams, subtitleId string) (io.ReadCloser, string, string, error)
 type Handler struct {
+	enabled bool
 	config   *ProviderConfig
 	Search   Search
 	Download Download
@@ -49,6 +50,7 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 	r := resty.New()
 	handlers := map[string]Handler{
 		"subdivx": {
+			enabled: true,
 			config: &ProviderConfig{
 				url:       "https://subdivx.com/",
 				searchUrl: "inc/ajax.php",
@@ -60,6 +62,7 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 			Download: downloadDivxSubtitle,
 		},
 		"opensubtitles": {
+			enabled: true,
 			config: &ProviderConfig{
 				url:         "https://api.opensubtitles.com/",
 				searchUrl:   "api/v1/subtitles",
@@ -106,6 +109,11 @@ func (m *Manager) search(ctx context.Context, provider string, query string) []m
 			fmt.Printf("skipping %s not matched with %s\n", p, provider)
 			continue
 		}
+		
+		if !m.handlers[p].enabled{
+			continue
+		}
+		
 		wg.Add(1)
 		go func(ctx context.Context, provider string, query string, subChan chan<- []models.Subtitle, wg *sync.WaitGroup) {
 			defer wg.Done()

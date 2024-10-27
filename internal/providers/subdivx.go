@@ -45,7 +45,6 @@ func searchDivx(provider *ProviderParams, query string) []models.Subtitle {
 		Token:   token.Token,
 	}
 	buscaVersion := fmt.Sprintf("buscar%s", version)
-	fmt.Printf("version: %s", buscaVersion)
 
 	queryParams := map[string]string{
 		"tabla":      params.Tabla,
@@ -53,7 +52,6 @@ func searchDivx(provider *ProviderParams, query string) []models.Subtitle {
 		buscaVersion: params.Buscar,
 		"token":      params.Token,
 	}
-	fmt.Printf("Params: %v\n", queryParams)
 	data, err := getSubtitles(provider, queryParams)
 	if err != nil {
 		provider.logger.Err(err).Msg("error while getting subtitles")
