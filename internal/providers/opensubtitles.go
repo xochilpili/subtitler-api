@@ -3,6 +3,7 @@ package providers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 
@@ -32,9 +33,15 @@ func searchOpenSubtitles(provider *ProviderParams, query string) []models.Subtit
 		provider.logger.Err(err).Msgf("error while fetching openapi subtitles: %v", err)
 		return nil
 	}
+	
+	if(res.StatusCode() != 200){
+		provider.logger.Err(errors.New("opensubtitles nont ok response")).Msgf("status response %d", res.StatusCode())
+		return nil;
+	}
 
 	err = json.Unmarshal(res.Body(), &target)
 	if err != nil {
+		fmt.Printf("%s", res.Body())
 		provider.logger.Err(err).Msgf("error while unmarshal opensubtitles json response: %v", err)
 		return nil
 	}
