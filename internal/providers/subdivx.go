@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/xochilpili/subtitler-api/internal/models"
 )
@@ -100,17 +101,29 @@ func getToken(provider *ProviderParams) (*Token, error) {
 
 func getSubtitles(provider *ProviderParams, params map[string]string) ([]models.Subtitle, error) {
 	var result SubdivxResponse[SubData]
+	provider.r.SetRetryCount(5).SetRetryWaitTime(5*time.Second)
+	provider.r.AddRetryCondition(func(r *resty.Response, _ error) bool {
+		errs := json.Unmarshal(r.Body(), &result)
+		if errs != nil{
+			return false
+		}
+		ok, err := strconv.Atoi(result.Secho)
+		if err != nil{
+			return false
+		}
+		return ok == 0
+	})
 	resp, err := provider.r.R().
 		SetContext(provider.ctx).
 		SetFormData(params).
 		SetHeaders(map[string]string{
-			"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+			"Content-Type": "application/x-www-form-urlencoded",
 			"User-Agent":   provider.config.userAgent,
 		}).
 		SetDebug(provider.config.debug).
 		Post(provider.config.url + provider.config.searchUrl)
 	if err != nil {
-		provider.logger.Err(err).Msgf("error while getting subtitler")
+		provider.logger.Err(err).Msgf("error while getting subtitles")
 		return nil, err
 	}
 
