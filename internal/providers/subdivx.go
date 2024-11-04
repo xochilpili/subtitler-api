@@ -100,19 +100,22 @@ func getToken(provider *ProviderParams) (*Token, error) {
 }
 
 func getSubtitles(provider *ProviderParams, params map[string]string) ([]models.Subtitle, error) {
-	var result SubdivxResponse[SubData]
+	
 	provider.r.SetRetryCount(5).SetRetryWaitTime(5*time.Second)
 	provider.r.AddRetryCondition(func(r *resty.Response, _ error) bool {
-		errs := json.Unmarshal(r.Body(), &result)
+		var tempResult SubdivxResponse[SubData]
+		errs := json.Unmarshal(r.Body(), &tempResult)
 		if errs != nil{
 			return false
 		}
-		ok, err := strconv.Atoi(result.Secho)
+		ok, err := strconv.Atoi(tempResult.Secho)
 		if err != nil{
 			return false
 		}
 		return ok == 0
 	})
+	
+	var result SubdivxResponse[SubData]
 	resp, err := provider.r.R().
 		SetContext(provider.ctx).
 		SetFormData(params).
