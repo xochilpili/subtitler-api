@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/xochilpili/subtitler-api/internal/models"
 )
@@ -144,5 +145,14 @@ func downloadOpenSubtitle(provider *ProviderParams, subtitleId string) (io.ReadC
 	if err != nil {
 		return nil, "", "", err
 	}
-	return res.RawBody(), "", "", nil
+
+	contentType := res.Header().Get("Content-Type")
+	ext := strings.Split(contentType, "/")[0]
+	if(ext == "text"){
+		ext = "srt"
+	}
+	filename := fmt.Sprintf("%s.%s", subtitleId, ext)
+	provider.logger.Info().Msgf("downloading file: %s", filename)
+	return res.RawBody(), filename, contentType, nil
+
 }
