@@ -53,7 +53,7 @@ func searchDivx(provider *ProviderParams, query string) []models.Subtitle {
 		buscaVersion: params.Buscar,
 		"token":      params.Token,
 	}
-	data, err := getSubtitles(provider, queryParams)
+	data, err := getSubtitles(provider, queryParams, token.Cookie)
 	if err != nil {
 		provider.logger.Err(err).Msg("error while getting subtitles")
 		return nil
@@ -99,7 +99,7 @@ func getToken(provider *ProviderParams) (*Token, error) {
 	return &token, nil
 }
 
-func getSubtitles(provider *ProviderParams, params map[string]string) ([]models.Subtitle, error) {
+func getSubtitles(provider *ProviderParams, params map[string]string, cookie string) ([]models.Subtitle, error) {
 	
 	provider.r.SetRetryCount(5).SetRetryWaitTime(5*time.Second)
 	provider.r.AddRetryCondition(func(r *resty.Response, _ error) bool {
@@ -122,6 +122,7 @@ func getSubtitles(provider *ProviderParams, params map[string]string) ([]models.
 		SetHeaders(map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
 			"User-Agent":   provider.config.userAgent,
+			"Cookie": cookie,
 		}).
 		SetDebug(provider.config.debug).
 		Post(provider.config.url + provider.config.searchUrl)
@@ -143,7 +144,6 @@ func getSubtitles(provider *ProviderParams, params map[string]string) ([]models.
 	// TODO: Investigate how to resolve error when using go routines
 	reg := regexp.MustCompile(`\n|\r\n`)
 	for _, item := range result.Data {
-		wg.Add(1)
 		var group []string
 		var quality []string
 		var resolution []string
@@ -180,6 +180,7 @@ func getSubtitles(provider *ProviderParams, params map[string]string) ([]models.
 		subtitle.Resolution = resolution
 		subtitle.Duration = duration
 
+		wg.Add(1)
 		go func(provider *ProviderParams, sub *models.Subtitle, subChan chan<- models.Subtitle, wg *sync.WaitGroup) {
 			getComments(provider, subtitle, subChan, wg)
 		}(provider, subtitle, subtitlesChan, wg)
