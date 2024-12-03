@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	"github.com/xochilpili/subtitler-api/internal/models"
@@ -34,10 +33,10 @@ func searchOpenSubtitles(provider *ProviderParams, query string) []models.Subtit
 		provider.logger.Err(err).Msgf("error while fetching openapi subtitles: %v", err)
 		return nil
 	}
-	
-	if(res.StatusCode() != 200){
+
+	if res.StatusCode() != 200 {
 		provider.logger.Err(errors.New("opensubtitles nont ok response")).Msgf("status response %d", res.StatusCode())
-		return nil;
+		return nil
 	}
 
 	err = json.Unmarshal(res.Body(), &target)
@@ -59,14 +58,14 @@ func translate2Model(items []OpenSubtitlesItem) []models.Subtitle {
 		var itemType string
 		var season int
 		var episode int
-		id, _ := strconv.Atoi(item.Id)
+		id := item.Attributes.LegacySubtitleId
 		desc := item.Attributes.Release
 		itemType, season, episode = parseTitle(item.Attributes.FeatureDetails.Title)
 		group, quality, resolution, duration = parseExtra(desc)
 		subtitle := models.Subtitle{
 			Provider:    "opensubtitles",
 			Id:          id,
-			Type: itemType,
+			Type:        itemType,
 			Title:       item.Attributes.FeatureDetails.Title,
 			Description: item.Attributes.Release,
 			Language:    item.Attributes.Language,
@@ -75,8 +74,8 @@ func translate2Model(items []OpenSubtitlesItem) []models.Subtitle {
 			Resolution:  resolution,
 			Duration:    duration,
 			Year:        item.Attributes.FeatureDetails.Year,
-			Season: season,
-			Episode: episode,
+			Season:      season,
+			Episode:     episode,
 		}
 		subtitles = append(subtitles, subtitle)
 	}
@@ -148,7 +147,7 @@ func downloadOpenSubtitle(provider *ProviderParams, subtitleId string) (io.ReadC
 
 	contentType := res.Header().Get("Content-Type")
 	ext := strings.Split(contentType, "/")[0]
-	if(ext == "text"){
+	if ext == "text" {
 		ext = "srt"
 	}
 	filename := fmt.Sprintf("%s.%s", subtitleId, ext)
