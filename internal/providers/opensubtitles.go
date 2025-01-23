@@ -35,7 +35,7 @@ func searchOpenSubtitles(provider *ProviderParams, query string) []models.Subtit
 	}
 
 	if res.StatusCode() != 200 {
-		provider.logger.Err(errors.New("opensubtitles nont ok response")).Msgf("status response %d", res.StatusCode())
+		provider.logger.Err(errors.New("opensubtitles non ok response")).Msgf("status response %d", res.StatusCode())
 		return nil
 	}
 
@@ -58,7 +58,7 @@ func translate2Model(items []OpenSubtitlesItem) []models.Subtitle {
 		var itemType string
 		var season int
 		var episode int
-		id := item.Attributes.LegacySubtitleId
+		id := item.Attributes.Files[0].FileId
 		desc := item.Attributes.Release
 		itemType, season, episode = parseTitle(item.Attributes.FeatureDetails.Title)
 		group, quality, resolution, duration = parseExtra(desc)
