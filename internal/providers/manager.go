@@ -11,6 +11,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/xochilpili/subtitler-api/internal/config"
 	"github.com/xochilpili/subtitler-api/internal/models"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type ProviderConfig struct {
@@ -33,7 +35,7 @@ type ProviderParams struct {
 type Search func(provider *ProviderParams, query string) []models.Subtitle
 type Download func(params *ProviderParams, subtitleId string) (io.ReadCloser, string, string, error)
 type Handler struct {
-	enabled bool
+	enabled  bool
 	config   *ProviderConfig
 	Search   Search
 	Download Download
@@ -85,8 +87,21 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 }
 
 func (m *Manager) Search(ctx context.Context, provider string, query string, postFilter *models.PostFilters) []models.Subtitle {
+	tracer := otel.Tracer(m.config.ServiceName)
+	ctx, span := tracer.Start(ctx, "Manager.Search")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("provider", provider),
+		attribute.String("query", query),
+	)
+
 	items := m.search(ctx, provider, query)
+	_, spanFilter := tracer.Start(ctx, "Manager.PostFiltering")
 	filtered := m.postFiltering(postFilter, items)
+	spanFilter.SetAttributes(attribute.Int("result_count", len(filtered)))
+	spanFilter.End()
+
 	return filtered
 }
 
@@ -109,22 +124,28 @@ func (m *Manager) search(ctx context.Context, provider string, query string) []m
 			fmt.Printf("skipping %s not matched with %s\n", p, provider)
 			continue
 		}
-		
-		if !m.handlers[p].enabled{
+
+		if !m.handlers[p].enabled {
 			continue
 		}
-		
+
 		wg.Add(1)
 		go func(ctx context.Context, provider string, query string, subChan chan<- []models.Subtitle, wg *sync.WaitGroup) {
 			defer wg.Done()
+			tracer := otel.Tracer(m.config.ServiceName)
+			ctxProvider, span := tracer.Start(ctx, fmt.Sprintf("Search.%s", provider))
+			defer span.End()
+
 			m.logger.Info().Msgf("Searching subtitles for provider: %s", provider)
 			items := m.handlers[provider].
 				Search(&ProviderParams{
 					config: m.handlers[provider].config,
 					logger: m.logger,
 					r:      m.r,
-					ctx:    ctx,
+					ctx:    ctxProvider,
 				}, query)
+
+			span.SetAttributes(attribute.Int("result_count", len(items)))
 			subChan <- items
 		}(ctx, p, query, subChan, wg)
 	}

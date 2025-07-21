@@ -1,6 +1,7 @@
 package webserver
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,21 +9,41 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/xochilpili/subtitler-api/internal/models"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func (w *WebServer) SearchByProvider(c *gin.Context) {
+	ctx := c.Request.Context()
+	tracer := otel.Tracer(w.config.ServiceName)
+	ctx, span := tracer.Start(ctx, "Search by provider")
+	defer span.End()
+
 	provider := c.Param("provider")
 	if provider == "" {
-		c.JSON(http.StatusBadRequest, &gin.H{"mesasge": "error", "error": "bad request"})
+		span.RecordError(errors.New("missing provider"))
+		span.SetStatus(http.StatusBadRequest, "missing provider")
+		c.JSON(http.StatusBadRequest, &gin.H{"message": "error", "error": "bad request"})
 		return
 	}
 	query := c.Query("term")
 	if query == "" {
-		c.JSON(http.StatusBadRequest, &gin.H{"mesasge": "error", "error": "bad request"})
+		span.RecordError(errors.New("missing query term"))
+		span.SetStatus(http.StatusBadRequest, "missing query term")
+		c.JSON(http.StatusBadRequest, &gin.H{"message": "error", "error": "bad request"})
 		return
 	}
 
-	subtitles := w.manager.Search(c.Request.Context(), provider, query, getPostFilters(c))
+	ctxSearch, searchSpan := tracer.Start(ctx, "Searching")
+	subtitles := w.manager.Search(ctxSearch, provider, query, getPostFilters(c))
+	searchSpan.End()
+
+	span.SetAttributes(
+		attribute.String("provider", provider),
+		attribute.String("query", query),
+		attribute.Int("total_result", len(subtitles)),
+	)
+
 	c.JSON(http.StatusOK, &gin.H{"message": "ok", "total": len(subtitles), "data": subtitles})
 }
 

@@ -8,9 +8,17 @@ import (
 	"strings"
 
 	"github.com/xochilpili/subtitler-api/internal/models"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func searchOpenSubtitles(provider *ProviderParams, query string) []models.Subtitle {
+	tracer := otel.Tracer("opensubtitles") // Changed to provider url as app
+	ctx, span := tracer.Start(provider.ctx, "OpenSubtitles.API.Search")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("query", query))
+
 	var target OpenSubtitlesResponse[OpenSubtitlesItem]
 
 	res, err := provider.r.R().
@@ -20,7 +28,7 @@ func searchOpenSubtitles(provider *ProviderParams, query string) []models.Subtit
 			"User-Agent":   provider.config.userAgent,
 		}).
 		SetDebug(provider.config.debug).
-		SetContext(provider.ctx).
+		SetContext(ctx).
 		SetQueryParams(map[string]string{
 			"type":          "movie",
 			"query":         query,
@@ -30,7 +38,9 @@ func searchOpenSubtitles(provider *ProviderParams, query string) []models.Subtit
 		Get(provider.config.url + provider.config.searchUrl)
 
 	if err != nil {
-		provider.logger.Err(err).Msgf("error while fetching openapi subtitles: %v", err)
+		span.RecordError(err)
+		span.SetStatus(499, "error while fetching opensubtitles subtitles")
+		provider.logger.Err(err).Msgf("error while fetching opensubtitles: %v", err)
 		return nil
 	}
 
@@ -83,6 +93,13 @@ func translate2Model(items []OpenSubtitlesItem) []models.Subtitle {
 }
 
 func downloadOpenSubtitle(provider *ProviderParams, subtitleId string) (io.ReadCloser, string, string, error) {
+	tracer := otel.Tracer(provider.config.url + provider.config.searchUrl)
+	ctx, rootSpan := tracer.Start(provider.ctx, "Download Subtitle Flow")
+	defer rootSpan.End()
+
+	ctxLogin, loginSpan := tracer.Start(ctx, "Login")
+	loginSpan.SetAttributes(attribute.String("endpoint", provider.config.url+"api/v1/login"))
+
 	var tokenResponse struct {
 		Token string `json:"token"`
 	}
@@ -98,21 +115,33 @@ func downloadOpenSubtitle(provider *ProviderParams, subtitleId string) (io.ReadC
 			Username: provider.config.apiUsername,
 			Password: provider.config.apiPassword,
 		}).
+		SetContext(ctxLogin).
 		SetResult(&tokenResponse).
 		SetDebug(provider.config.debug).
 		Post(provider.config.url + "api/v1/login")
 
 	if err != nil {
+		loginSpan.RecordError(err)
+		loginSpan.SetStatus(401, "login error")
 		return nil, "", "", err
 	}
 
 	if tokenResponse.Token == "" {
 		errs := errors.New("unable to get token")
+		loginSpan.RecordError(errs)
+		loginSpan.SetStatus(401, "unable to get token")
 		return nil, "", "", errs
 	}
+	rootSpan.AddEvent("login request completed")
+	loginSpan.End()
+
 	var downloadResponse struct {
 		Link string `json:"link"`
 	}
+
+	ctxDownloadApi, spanDownload := tracer.Start(ctx, "Request Download Link")
+	spanDownload.SetAttributes(attribute.String("file_id", subtitleId))
+
 	_, err = provider.r.R().
 		SetHeaders(map[string]string{
 			"Content-Type":  "application/json",
@@ -121,7 +150,7 @@ func downloadOpenSubtitle(provider *ProviderParams, subtitleId string) (io.ReadC
 			"User-Agent":    provider.config.userAgent,
 		}).
 		SetDebug(provider.config.debug).
-		SetContext(provider.ctx).
+		SetContext(ctxDownloadApi).
 		SetResult(&downloadResponse).
 		SetBody(struct {
 			FileId string `json:"file_id"`
@@ -129,19 +158,27 @@ func downloadOpenSubtitle(provider *ProviderParams, subtitleId string) (io.ReadC
 			FileId: subtitleId,
 		}).
 		Post(provider.config.url + "api/v1/download")
-	if err != nil {
+
+	if err != nil || downloadResponse.Link == "" {
+		spanDownload.RecordError(err)
+		spanDownload.SetStatus(404, "failed to get download link")
 		return nil, "", "", err
 	}
-	if downloadResponse.Link == "" {
-		errs := errors.New("unable to get download link")
-		return nil, "", "", errs
-	}
+	rootSpan.AddEvent("download link received")
+	spanDownload.End()
+
+	ctxDownload, spanDownloaded := tracer.Start(ctx, "Download Subtitle File")
+	spanDownloaded.SetAttributes(attribute.String("download_url", downloadResponse.Link))
 
 	res, err := provider.r.R().
 		SetDoNotParseResponse(true).
 		SetDebug(provider.config.debug).
+		SetContext(ctxDownload).
 		Get(downloadResponse.Link)
+
 	if err != nil {
+		spanDownloaded.RecordError(err)
+		spanDownloaded.SetStatus(404, "file download error")
 		return nil, "", "", err
 	}
 
@@ -152,6 +189,8 @@ func downloadOpenSubtitle(provider *ProviderParams, subtitleId string) (io.ReadC
 	}
 	filename := fmt.Sprintf("%s.%s", subtitleId, ext)
 	provider.logger.Info().Msgf("downloading file: %s", filename)
-	return res.RawBody(), filename, contentType, nil
+	rootSpan.AddEvent(fmt.Sprintf("downloaded file: %s, format: %s", filename, ext))
+	spanDownloaded.End()
 
+	return res.RawBody(), filename, contentType, nil
 }
