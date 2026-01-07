@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/xochilpili/subtitler-api/internal/models"
@@ -75,6 +76,7 @@ func translate2Model(items []OpenSubtitlesItem) []models.Subtitle {
 		subtitle := models.Subtitle{
 			Provider:    "opensubtitles",
 			Id:          id,
+			ExternalId:  strconv.Itoa(id),
 			Type:        itemType,
 			Title:       item.Attributes.FeatureDetails.Title,
 			Description: item.Attributes.Release,

@@ -20,6 +20,7 @@ type Config struct {
 	OpenSubtitlesApiKey      string `required:"true" split_words:"true"`
 	OpenSubtitlesApiUsername string `required:"true" split_words:"true"`
 	OpenSubtitlesApiPassword string `required:"true" split_words:"true"`
+	SubxApiKey               string `required:"true" split_words:"true"`
 	OtelEnabled              bool   `required:"true" split_words:"true"`
 	OtelEndpoint             string `split_words:"true"`
 	LokiEndpoint             string `split_words:"true"`

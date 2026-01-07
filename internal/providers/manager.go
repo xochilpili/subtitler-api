@@ -48,11 +48,20 @@ type Manager struct {
 	handlers map[string]Handler
 }
 
+/*
+SubX API (unknown documentation)
+https://subx-api.duckdns.org/api/subtitles/search?title=sinners+2025
+https://subx-api.duckdns.org/api/subtitles/9bb65e75-0d75-4d99-8c61-65680a023c23/download
+
+Authorization: Bearer 8PgmDkZg_8PgmDkZgscoCZtAwWI6oFNeAvbneYjdZTqhwBwT3lqk
+content-type: application/x-www-form-urlencoded
+content-disposition: attachment
+*/
 func New(config *config.Config, logger *zerolog.Logger) *Manager {
 	r := resty.New()
 	handlers := map[string]Handler{
 		"subdivx": {
-			enabled: true,
+			enabled: false,
 			config: &ProviderConfig{
 				url:       "https://subdivx.com/",
 				searchUrl: "inc/ajax.php",
@@ -63,8 +72,20 @@ func New(config *config.Config, logger *zerolog.Logger) *Manager {
 			Search:   searchDivx,
 			Download: downloadDivxSubtitle,
 		},
-		"opensubtitles": {
+		"subx": {
 			enabled: true,
+			config: &ProviderConfig{
+				url:       "https://subx-api.duckdns.org/api",
+				searchUrl: "subtitles/search",
+				userAgent: "",
+				debug:     config.Debug,
+				apiKey:    strings.TrimSpace(config.SubxApiKey),
+			},
+			Search:   searchSubX,
+			Download: downloadSubX,
+		},
+		"opensubtitles": {
+			enabled: false,
 			config: &ProviderConfig{
 				url:         "https://api.opensubtitles.com/",
 				searchUrl:   "api/v1/subtitles",

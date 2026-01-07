@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: subtitler-api
-        image: registry.paranoids.us/subtitler-api:main
+        image: registry.paranoids.org/subtitler-api:main
         imagePullPolicy: Always
         env:
           - name: SA_HOST
@@ -39,6 +39,11 @@ spec:
               secretKeyRef:
                 name: subtitler-api-key
                 key: password
+          - name: SA_SUBX_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: subtitler-api-key
+                key: subXKey
         ports:
         - containerPort: 4002
       imagePullSecrets:
