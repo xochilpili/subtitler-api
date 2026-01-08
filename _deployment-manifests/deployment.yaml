@@ -24,6 +24,10 @@ spec:
             value: 0.0.0.0
           - name: SA_PORT
             value: "4002"
+          - name: SA_OTEL_ENABLED
+            value: "true"
+          - name: SA_OTEL_ENDPOINT
+            value: "otel-collector.monitoring.svc.cluster.local:4317"
           - name: SA_OPEN_SUBTITLES_API_KEY
             valueFrom:
               secretKeyRef:
