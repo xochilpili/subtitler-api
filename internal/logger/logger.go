@@ -14,6 +14,8 @@ func New(config *config.Config) *zerolog.Logger {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	logger := zerolog.New(os.Stderr).With().Timestamp().Str("service", config.ServiceName).Str("version", version.VERSION).Logger()
+
 	zerolog.DefaultContextLogger = &logger
+
 	return &logger
 }

@@ -101,3 +101,21 @@ type OpenSubtitlesItem struct {
 	Type       string                `json:"type"`
 	Attributes OpenSubtitlesItemAttr `json:"attributes"`
 }
+
+type SubXResponse[T any] struct {
+	Items []T `json:"items"`
+	Total int `json:"total"`
+}
+
+type SubXResponseItem struct {
+	Id           string `json:"id"`
+	VideoType    string `json:"video_type"`
+	Title        string `json:"title"`
+	Season       int    `json:"season,omitempty"`
+	Episode      int    `json:"episode,omitempty"`
+	ImdbId       string `json:"imdb_id"`
+	Description  string `json:"description"`
+	UploaderName string `json:"uploader_name"`
+	PostedAt     string `json:"posted_at"`
+	Downloads    int    `json:"downloads"`
+}

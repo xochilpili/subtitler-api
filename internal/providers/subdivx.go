@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +14,8 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/xochilpili/subtitler-api/internal/models"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type Token struct {
@@ -23,19 +24,38 @@ type Token struct {
 }
 
 func searchDivx(provider *ProviderParams, query string) []models.Subtitle {
-	ctx, cancel := context.WithTimeout(provider.ctx, 30*time.Second)
-	provider.ctx = ctx
-	defer cancel()
-	provider.logger.Info().Msgf("searching subtitles for: %s", query)
-	version, err := getVersion(provider)
-	if err != nil {
-		return nil
-	}
+	tracer := otel.Tracer("subdivx")
+	ctx, span := tracer.Start(provider.ctx, "Subdivx.Search")
+	defer span.End()
 
-	token, err := getToken(provider)
+	span.SetAttributes(attribute.String("query", query))
+	/*ctx, cancel := context.WithTimeout(provider.ctx, 30*time.Second)
+	provider.ctx = ctx
+	defer cancel()*/
+	provider.logger.Info().Msgf("searching subtitles for: %s", query)
+
+	ctxVersion, spanVersion := tracer.Start(ctx, "Get Version")
+	provider.ctx = ctxVersion
+	version, err := getVersion(provider)
+	spanVersion.End()
+
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(499, "error while getting version")
 		return nil
 	}
+	span.AddEvent("Version retrieved")
+
+	ctxToken, spanToken := tracer.Start(ctx, "Get token")
+	provider.ctx = ctxToken
+	token, err := getToken(provider)
+	spanToken.End()
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(499, "failed to get token")
+		return nil
+	}
+	span.AddEvent("Token received")
 
 	provider.logger.Debug().Msgf("token: %s, cookie: %s", token.Token, token.Cookie)
 
@@ -47,18 +67,24 @@ func searchDivx(provider *ProviderParams, query string) []models.Subtitle {
 	}
 	buscaVersion := fmt.Sprintf("buscar%s", version)
 
+	ctxFetch, spanFetch := tracer.Start(ctx, "Fetch Subtitles")
 	queryParams := map[string]string{
 		"tabla":      params.Tabla,
 		"filtros":    params.Filtros,
 		buscaVersion: params.Buscar,
 		"token":      params.Token,
 	}
+
+	provider.ctx = ctxFetch
 	data, err := getSubtitles(provider, queryParams, token.Cookie)
+	spanFetch.End()
 	if err != nil {
 		provider.logger.Err(err).Msg("error while getting subtitles")
+		span.RecordError(err)
+		span.SetStatus(499, "failed to fetch subtitles")
 		return nil
 	}
-
+	span.SetAttributes(attribute.Int("subtitle_count", len(data)))
 	return data
 }
 
@@ -100,21 +126,21 @@ func getToken(provider *ProviderParams) (*Token, error) {
 }
 
 func getSubtitles(provider *ProviderParams, params map[string]string, cookie string) ([]models.Subtitle, error) {
-	
-	provider.r.SetRetryCount(5).SetRetryWaitTime(5*time.Second)
+
+	provider.r.SetRetryCount(5).SetRetryWaitTime(5 * time.Second)
 	provider.r.AddRetryCondition(func(r *resty.Response, _ error) bool {
 		var tempResult SubdivxResponse[SubData]
 		errs := json.Unmarshal(r.Body(), &tempResult)
-		if errs != nil{
+		if errs != nil {
 			return false
 		}
 		ok, err := strconv.Atoi(tempResult.Secho)
-		if err != nil{
+		if err != nil {
 			return false
 		}
 		return ok == 0
 	})
-	
+
 	var result SubdivxResponse[SubData]
 	resp, err := provider.r.R().
 		SetContext(provider.ctx).
@@ -122,7 +148,7 @@ func getSubtitles(provider *ProviderParams, params map[string]string, cookie str
 		SetHeaders(map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
 			"User-Agent":   provider.config.userAgent,
-			"Cookie": cookie,
+			"Cookie":       cookie,
 		}).
 		SetDebug(provider.config.debug).
 		Post(provider.config.url + provider.config.searchUrl)
@@ -164,14 +190,14 @@ func getSubtitles(provider *ProviderParams, params map[string]string, cookie str
 		}
 		subtitle := &models.Subtitle{
 			Provider:    "subdivx",
-			Type: itemType,
+			Type:        itemType,
 			Id:          item.Id,
 			Title:       title,
 			Description: desc,
 			Language:    "es",
 			//Cds:         item.Cds,
-			Year: year,
-			Season: season,
+			Year:    year,
+			Season:  season,
 			Episode: episode,
 		}
 
@@ -273,7 +299,7 @@ func downloadDivxSubtitle(provider *ProviderParams, subtitleId string) (io.ReadC
 	return res.RawBody(), filename, contentType, nil
 }
 
-func parseTitle(text string) (itemType string, season int, episode int){
+func parseTitle(text string) (itemType string, season int, episode int) {
 	s := Parse(text, "season")
 	if s != nil {
 		re := regexp.MustCompile("[^0-9]+")
@@ -282,13 +308,13 @@ func parseTitle(text string) (itemType string, season int, episode int){
 		itemType = "serie"
 	}
 	e := Parse(text, "episode")
-	if e != nil{
+	if e != nil {
 		re := regexp.MustCompile("[^0-9]+")
 		str := re.ReplaceAllString(e[0], "")
 		episode, _ = strconv.Atoi(str)
 		itemType = "serie"
 	}
-	if itemType == ""{
+	if itemType == "" {
 		itemType = "movie"
 	}
 	return
@@ -298,7 +324,7 @@ func parseExtra(text string) ([]string, []string, []string, []string) {
 	var quality []string
 	var resolution []string
 	var duration []string
-	
+
 	g := Parse(text, "group")
 	if g != nil {
 		group = append(group, g...)

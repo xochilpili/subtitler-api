@@ -22,6 +22,7 @@ type Subtitle struct {
 	Provider    string `json:"provider"`
 	Type string `json:"type"`
 	Id          int    `json:"id"`
+	ExternalId string `json:"external_id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Language    string `json:"language"`

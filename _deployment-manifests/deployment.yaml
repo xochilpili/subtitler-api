@@ -17,13 +17,17 @@ spec:
     spec:
       containers:
       - name: subtitler-api
-        image: registry.paranoids.us/subtitler-api:main
+        image: registry.paranoids.org/subtitler-api:main
         imagePullPolicy: Always
         env:
           - name: SA_HOST
             value: 0.0.0.0
           - name: SA_PORT
             value: "4002"
+          - name: SA_OTEL_ENABLED
+            value: "true"
+          - name: SA_OTEL_ENDPOINT
+            value: "otel-collector.monitoring.svc.cluster.local:4317"
           - name: SA_OPEN_SUBTITLES_API_KEY
             valueFrom:
               secretKeyRef:
@@ -39,6 +43,11 @@ spec:
               secretKeyRef:
                 name: subtitler-api-key
                 key: password
+          - name: SA_SUBX_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: subtitler-api-key
+                key: subXKey
         ports:
         - containerPort: 4002
       imagePullSecrets:
