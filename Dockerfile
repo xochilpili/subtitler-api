@@ -1,4 +1,4 @@
-FROM golang:1.21.1-alpine AS builder
+FROM golang:1.23-alpine AS builder
 RUN apk add build-base git openssh-client openssl-dev librdkafka-dev librdkafka pkgconf
 
 RUN mkdir /app
