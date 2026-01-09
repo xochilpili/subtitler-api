@@ -5,8 +5,7 @@ import (
 	"strings"
 )
 
-var (
-	// go:embed VERSION
-	version string
-	VERSION = strings.TrimSpace(version)
-)
+//go:embed VERSION
+var version string
+
+var VERSION = strings.TrimSpace(version)

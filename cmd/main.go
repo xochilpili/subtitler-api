@@ -11,6 +11,7 @@ import (
 	"github.com/xochilpili/subtitler-api/internal/logger"
 	"github.com/xochilpili/subtitler-api/internal/metrics"
 	"github.com/xochilpili/subtitler-api/internal/tracer"
+	"github.com/xochilpili/subtitler-api/internal/version"
 	"github.com/xochilpili/subtitler-api/internal/webserver"
 )
 
