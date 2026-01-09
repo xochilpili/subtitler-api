@@ -20,6 +20,8 @@ spec:
         image: registry.paranoids.org/subtitler-api:main
         imagePullPolicy: Always
         env:
+          - name: SA_ENV
+            value: staging
           - name: SA_HOST
             value: 0.0.0.0
           - name: SA_PORT

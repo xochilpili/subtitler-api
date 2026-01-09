@@ -9,6 +9,7 @@ import (
 
 	"github.com/xochilpili/subtitler-api/internal/config"
 	"github.com/xochilpili/subtitler-api/internal/logger"
+	"github.com/xochilpili/subtitler-api/internal/metrics"
 	"github.com/xochilpili/subtitler-api/internal/tracer"
 	"github.com/xochilpili/subtitler-api/internal/webserver"
 )
@@ -18,6 +19,7 @@ func main() {
 	logger := logger.New(config)
 
 	tracerShutdown := tracer.InitTracer(context.Background(), config, logger)
+	metricsShutdown := metrics.InitMetrics(context.Background(), config, logger)
 
 	srv := webserver.New(config, logger)
 	go func() {
@@ -37,6 +39,7 @@ func main() {
 	if err := srv.Web.Shutdown(context.Background()); err != nil {
 		logger.Fatal().Err(err).Msg("error while shutting down server.")
 	}
+	metricsShutdown()
 	tracerShutdown()
 	logger.Info().Msg("clean shutdown")
 }
